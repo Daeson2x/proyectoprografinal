@@ -1,0 +1,147 @@
+import React, { Component } from 'react';
+import { View, Text, Image, TextInput, Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { supabase } from './supabase'; // Tu cliente de Supabase
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+
+GoogleSignin.configure({
+  webClientId: '840267596966-6cb0ep4e9qous2554j6fec1cikpv5jov.apps.googleusercontent.com', // Usa tu Web Client ID
+  scopes: [
+    'https://www.googleapis.com/auth/userinfo.email',    // Para obtener el correo electrónico del usuario
+    'https://www.googleapis.com/auth/userinfo.profile',  // Para obtener información básica del perfil (nombre, foto)
+  ],
+  offlineAccess: true, // Si deseas usar el acceso sin conexión (por ejemplo, para obtener un refresh token)
+});
+
+export default class Login extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      email: '',
+      password: '',
+    };
+  }
+
+  login = async () => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: this.state.email,
+      password: this.state.password,
+    });
+    if (error) {
+      Alert.alert('The mail or password is incorrect');
+    } else {
+      Alert.alert('Welcome to Mangadan');
+      this.props.navigation.navigate('Home');
+    }
+  };
+
+  // Función para autenticar con Google
+  loginWithGoogle = async () => {
+    try {
+      // Intentar iniciar sesión con Google
+      const userInfo = await GoogleSignin.signIn();
+      const { idToken } = userInfo;
+
+      // Usar el idToken para autenticar con Supabase
+      const { user, error } = await supabase.auth.signIn({
+        provider: 'google',
+        token: idToken,
+      });
+
+      if (error) {
+        Alert.alert('Google authentication failed', error.message);
+      } else {
+        Alert.alert('Welcome to Mangadan');
+        this.props.navigation.navigate('Home');
+      }
+    } catch (error) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // El usuario canceló el inicio de sesión
+        Alert.alert('Google login was cancelled');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // Ya está en progreso
+        Alert.alert('Google login in progress');
+      } else {
+        // Otro error
+        Alert.alert('Something went wrong', error.message);
+      }
+    }
+  };
+
+  render() {
+    return (
+      <View style={styles.container}>
+        <View style={{ alignItems: 'center', marginTop: '5%' }}>
+          <Image source={require('./Fotos/mangadan.png')} style={{ width: 300, height: 75 }} />
+        </View>
+
+        <View style={{ alignItems: 'center', marginTop: '10%' }}>
+          <Image source={require('./Fotos/logo1.png')} style={{ width: 250, height: 250 }} />
+        </View>
+
+        {/* Formulario de Login con email y contraseña */}
+        <View style={{ alignItems: 'center', marginTop: '5%' }}>
+          <View style={{ borderRadius: 15, borderColor: 'white', borderWidth: 3, width: '45%' }}>
+            <TextInput
+              style={{ color: 'white', textAlign: 'center', width: 300, height: 50 }}
+              placeholder="Enter your email"
+              placeholderTextColor="white"
+              fontSize={20}
+              onChangeText={(email) => this.setState({ email })}
+            />
+          </View>
+        </View>
+
+        <View style={{ alignItems: 'center', marginTop: '5%' }}>
+          <View style={{ borderRadius: 15, borderColor: 'white', borderWidth: 3, width: '100%' }}>
+            <TextInput
+              style={{ color: 'white', textAlign: 'center', width: 300, height: 50 }}
+              placeholder="   Password   "
+              fontSize={20}
+              placeholderTextColor="white"
+              onChangeText={(password) => this.setState({ password })}
+              secureTextEntry={true}
+            />
+          </View>
+        </View>
+
+        {/* Botón de Login normal */}
+        <View style={{ alignItems: 'center' }}>
+          <View style={{ borderRadius: 390, borderColor: 'white', width: '45%', marginTop: '5%' }}>
+            <TouchableOpacity style={styles.button} onPress={this.login}>
+              <Text style={styles.buttonText}>Log In</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Botón de Google */}
+        <View style={{ alignItems: 'center', marginTop: '5%' }}>
+          <TouchableOpacity style={styles.button} onPress={this.loginWithGoogle}>
+            <Text style={styles.buttonText}>Log In with Google</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000000', // Cambia este color al que prefieras
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  button: {
+    backgroundColor: '#FF3800',
+    padding: 10,
+    width: 150,
+    borderRadius: 15, // Ajusta este valor para redondear más el botón
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold', // Poner el texto en negritas
+  },
+});
